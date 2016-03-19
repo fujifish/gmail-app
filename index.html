@@ -1,0 +1,183 @@
+<html style="height:100%">
+  <head>
+    <title>Gmail</title>
+    <link rel="stylesheet" href="./bootstrap.css">
+    <script src="./jquery-1.11.2.js"></script>
+    <script src="./bootstrap.js"></script>
+
+    <script>
+
+      var remote = require('remote');
+      var app = remote.require('app');
+      var shell = require('shell');
+      var ipc = require('ipc');
+      var unreadPolling;
+      var webview;
+
+      function findText() {
+        var text = $('#find-text').val();
+        if (text && text.length > 0) {
+          webview.send('find', text);
+        }
+      }
+
+      function toggleFindPane() {
+        $('#find-pane').toggle();
+        $('#find-text').focus();
+      }
+
+
+      onload = function() {
+
+        ipc.on('find', toggleFindPane);
+
+        webview = document.getElementById("gmail-web-view");
+
+        webview.addEventListener('console-message', function(e) {
+          console.log('gmail: ', e.message);
+        });
+
+        webview.addEventListener('new-window', function(e) {
+          var url = e.url;
+          if (url.indexOf('https://accounts.google.com/AddSession') === 0) {
+            webview.src = url;
+            return;
+          }
+
+          if (url.indexOf('https://mail.google.com/mail/u/') === 0) {
+            webview.src = url;
+            return;
+          }
+
+          if (url.charAt(0) == '?') {
+            url = 'https://mail.google.com/mail/u/0/' + url;
+          }
+          shell.openExternal(url);
+          event.preventDefault();
+        });
+
+        webview.addEventListener('ipc-message', function(e) {
+          console.log('ipc: ' + e.channel + ': ' + e.args);
+          if (e.channel === 'unread') {
+            // app.dock.setBadge(e.args[0]);
+            ipc.send('unread', e.args[0])
+          } else if (e.channel === 'download') {
+            shell.openExternal(e.args[0]);
+          }
+        });
+
+        webview.addEventListener('did-finish-load', function() {
+
+          var windowTitle = webview.getTitle();
+          var accountMatch = windowTitle.match(/Inbox .*- (.+) - (.+)/);
+          if (accountMatch) {
+            remote.getCurrentWindow().setTitle(accountMatch[2] + ' - ' + accountMatch[1]);
+          }
+
+          function hookupBase() {
+            console.log('hookupBase');
+            window._ipc = require('ipc');
+          }
+
+          function hookupUnread() {
+            console.log('hookupUnread');
+            var last = null;
+            var ipc = require('ipc');
+            ipc.on('unread', function() {
+              var inbox = document.querySelector('a[href$="#inbox"][title^="Inbox"]');
+              // console.log('inbox: ' + inbox);
+              if (inbox) {
+                var title = inbox.innerText;
+                // console.log('inbox title: ' + title);
+                var matched = title.match(/Inbox \((\d+)\)/);
+                // console.log('inbox match: ' + matched);
+                var unread = '';
+                if (matched) {
+                  unread = matched[1];
+                }
+                // console.log('inbox unread: ' + unread);
+                if (last != unread) {
+                  last = unread;
+                  ipc.sendToHost('unread', unread);
+                }
+              }
+            });
+            console.log('hookupUnread Done');
+          }
+
+          function hookupFind() {
+            console.log('hookupFind');
+            var ipc = require('ipc');
+            ipc.on('find', function(text) {
+              console.log('finding: ' + text);
+              window.find(text, false, false, true, false, true, false);
+            });
+            console.log('hookupFind Done');
+          }
+
+          function hookupDownloads() {
+            console.log('hookupDownloads');
+            var ipc = require('ipc');
+            function enrich(e) {
+              e.onclick = function(ev) {
+                var url = e.getAttribute('download_url');
+                var match = url.match('.*(https://.*)');
+                if (match) {
+                  ipc.sendToHost('download', match[1]);
+                }
+              }
+            };
+            setInterval(function() {
+              var downloads = document.querySelectorAll('[download_url]');
+              for (var i = 0; i < downloads.length; ++i){
+                enrich(downloads[i])
+              }
+            }, 300);
+            console.log('hookupDownloads ');
+          }
+
+          // setTimeout(function() {
+          webview.executeJavaScript('(' + hookupBase.toString() + ')();');
+          webview.executeJavaScript('(' + hookupUnread.toString() + ')();');
+          webview.executeJavaScript('(' + hookupFind.toString() + ')();');
+          webview.executeJavaScript('(' + hookupDownloads.toString() + ')();');
+
+          if (unreadPolling) {
+            clearInterval(unreadPolling);
+          }
+          unreadPolling = setInterval(function() {
+            webview.send('unread');
+          }, 300);
+
+          // }, 500);
+
+        });
+
+      }
+    </script>
+
+  </head>
+  <body style="height:100%; margin:0; padding: 0;">
+
+    <div id="find-pane" class="" onkeydown="if (event.keyCode === 27) $('#find-pane').hide();"
+        style="display:none; opacity: 0.95; position: fixed; bottom:0; left: 0;width: 100%; margin:0; padding: 4px; background-color: #AAAAAA">
+      <div class="form-inline" style="margin:0; padding: 0; ">
+        <input type="text" class="form-control input-sm" id="find-text" style="height: 24px; !important"
+          onkeydown="if (event.keyCode === 13) $('#do-find').click();">
+        <input id="do-find" type="button" class="btn btn-default btn-xs" style="height: 24px; !important"
+          onclick="findText();" value="Find">
+        <button type="button" class="close" style="padding-right: 8px; vertical-align: middle;"
+          aria-label="Close" onclick="toggleFindPane();"><span aria-hidden="true">&times;</span></button>
+      </div>
+    </div>
+
+    <webview
+      disablewebsecurity
+      nodeintegration
+      id="gmail-web-view"
+      src="https://mail.google.com/mail/u/0/"
+      style="height:100%; margin:0; padding: 0;">
+    </webview>
+
+  </body>
+</html>
