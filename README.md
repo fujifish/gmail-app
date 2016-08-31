@@ -9,6 +9,8 @@ Gmail OSX app based on Electron
 
 ## How to Build
 
+_Note: requires node v5_
+
 ```
 clone https://github.com/fujifish/gmail-app.git
 cd gmail-app
@@ -16,7 +18,7 @@ npm install
 npm run build
 ```
 
-Copy the built application `Gmail.app` from in `Gmail-darwin-x64` to your Applications directory.
+Copy the the file `./Gmail-darwin-x64/Gmail.app` to your Applications directory.
 
 ## License
 
