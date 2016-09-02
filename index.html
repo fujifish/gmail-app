@@ -7,10 +7,8 @@
 
     <script>
 
-      var remote = require('remote');
-      var app = remote.require('app');
-      var shell = require('shell');
-      var ipc = require('ipc');
+      const {remote, shell, ipcRenderer} = require('electron');
+      var ipc = ipcRenderer;
       var unreadPolling;
       var webview;
 
@@ -38,7 +36,14 @@
         });
 
         webview.addEventListener('new-window', function(e) {
+          e.preventDefault();
           var url = e.url;
+
+          if (url.indexOf('https://mail.google.com/mail/u/0') === 0) {
+            // do not reload if showing the same url
+            return;
+          }
+
           if (url.indexOf('https://accounts.google.com/AddSession') === 0) {
             webview.src = url;
             return;
@@ -53,7 +58,6 @@
             url = 'https://mail.google.com/mail/u/0/' + url;
           }
           shell.openExternal(url);
-          event.preventDefault();
         });
 
         webview.addEventListener('ipc-message', function(e) {
@@ -66,7 +70,7 @@
           }
         });
 
-        webview.addEventListener('did-finish-load', function() {
+        webview.addEventListener('dom-ready', function() {
 
           var windowTitle = webview.getTitle();
           var accountMatch = windowTitle.match(/Inbox .*- (.+) - (.+)/);
@@ -76,13 +80,16 @@
 
           function hookupBase() {
             console.log('hookupBase');
-            window._ipc = require('ipc');
+            window.alert = function() {
+              console.log('alert: ' + arguments[0]);
+            };
+            console.log('hookupBase Done');
           }
 
           function hookupUnread() {
             console.log('hookupUnread');
             var last = null;
-            var ipc = require('ipc');
+            var ipc = require('electron').ipcRenderer;
             ipc.on('unread', function() {
               var inbox = document.querySelector('a[href$="#inbox"][title^="Inbox"]');
               // console.log('inbox: ' + inbox);
@@ -107,7 +114,7 @@
 
           function hookupFind() {
             console.log('hookupFind');
-            var ipc = require('ipc');
+            var ipc = require('electron').ipcRenderer;
             ipc.on('find', function(text) {
               console.log('finding: ' + text);
               window.find(text, false, false, true, false, true, false);
@@ -117,7 +124,7 @@
 
           function hookupDownloads() {
             console.log('hookupDownloads');
-            var ipc = require('ipc');
+            var ipc = require('electron').ipcRenderer;
             function enrich(e) {
               e.onclick = function(ev) {
                 var url = e.getAttribute('download_url');
@@ -133,7 +140,7 @@
                 enrich(downloads[i])
               }
             }, 300);
-            console.log('hookupDownloads ');
+            console.log('hookupDownloads Done');
           }
 
           // setTimeout(function() {

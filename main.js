@@ -1,15 +1,12 @@
-var app = require('app');  // Module to control application life.
-var BrowserWindow = require('browser-window');  // Module to create native browser window.
-var Menu = require('menu');
-var Tray = require('tray');
+const {app, BrowserWindow, Menu, Tray, crashReporter, ipcMain} = require('electron');  // Module to control application life.
 var util = require('util');
 
 // Report crashes to our server.
-require('crash-reporter').start();
+// crashReporter.start();
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the javascript object is GCed.
-var window = null;
+var win = null;
 var tray = null;
 
 // Quit when all windows are closed.
@@ -20,7 +17,7 @@ app.on('window-all-closed', function() {
 
 function createGmailWindow(url) {
   // Create the browser window.
-  window = new BrowserWindow({
+  win = new BrowserWindow({
     width: 1200,
     height: 800,
     title: 'Gmail',
@@ -28,23 +25,24 @@ function createGmailWindow(url) {
     "skip-taskbar": process.platform !== 'darwin'
   });
 
-  window.maximize();
+  win.maximize();
 
   // mainWindow.loadUrl('https://mail.google.com/');
-  window.loadUrl('file://'+__dirname+'/index.html');
+  win.loadURL('file://'+__dirname+'/index.html');
 
   // Emitted when the window is closed.
-  window.on('closed', function() {
+  win.on('closed', function() {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
-    window = null;
+    win = null;
   });
 
-  window.on('minimize', function(event) {
-    window.hide();
+  win.on('minimize', function(event) {
+    win.hide();
     event.preventDefault();
   });
+
 }
 
 function setupTray() {
@@ -53,7 +51,7 @@ function setupTray() {
   var trayContextMenu = Menu.buildFromTemplate([
     {
       label: 'Show Inbox',
-      click: function() { window.show(); }
+      click: function() { win.show(); }
     },
     {
       type: 'separator'
@@ -66,7 +64,7 @@ function setupTray() {
   tray.setContextMenu(trayContextMenu);
 
   tray.on('clicked', function() {
-    window.show();
+    win.show();
   });
 }
 
@@ -167,7 +165,7 @@ function setupMenu() {
     },
   ];
 
-  menu = Menu.buildFromTemplate(template);
+  var menu = Menu.buildFromTemplate(template);
 
   Menu.setApplicationMenu(menu); // Must be called within app.on('ready', function(){ ... });
 }
@@ -176,12 +174,11 @@ function setupMenu() {
 // initialization and ready for creating browser windows.
 app.on('ready', function() {
 
-  var ipc = require('ipc');
-  ipc.on('add-account', function(event, args) {
+  ipcMain.on('add-account', function(event, args) {
       createGmailWindow(args);
   });
 
-  ipc.on('unread', function(event, unread) {
+  ipcMain.on('unread', function(event, unread) {
     app.dock && app.dock.setBadge(unread);
     tray.setImage(unread.length === 0 ? __dirname+'/gmail-icon-default.png' : __dirname+'/gmail-icon-unread.png');
     tray.setToolTip((unread.length === 0 ? 'No': unread ) + ' unread messages');
