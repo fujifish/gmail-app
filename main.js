@@ -132,7 +132,7 @@ function setupMenu() {
         {
           label: 'Reload',
           accelerator: 'Command+R',
-          click: function() { BrowserWindow.getFocusedWindow().reloadIgnoringCache(); }
+          click: function() { BrowserWindow.getFocusedWindow().webContents.reloadIgnoringCache(); }
         },
         {
           label: 'Toggle DevTools',
