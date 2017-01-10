@@ -83,6 +83,13 @@
             window.alert = function() {
               console.log('alert: ' + arguments[0]);
             };
+
+            var origNotif = window.Notification;
+            window.Notification = function() {
+              var inbox = document.querySelector('a[href$="#inbox"][title^="Inbox"]').click();
+              return new origNotif(arguments[0], (arguments.length > 1 ? arguments[1] : undefined));
+            };
+
             console.log('hookupBase Done');
           }
 
