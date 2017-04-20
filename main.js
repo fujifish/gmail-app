@@ -1,5 +1,7 @@
-const {app, BrowserWindow, Menu, Tray, crashReporter, ipcMain} = require('electron');  // Module to control application life.
-var util = require('util');
+const {app, BrowserWindow, Menu, Tray, crashReporter, ipcMain, session} = require('electron');  // Module to control application life.
+const spellchecker = require('electron-context-menu');
+const contextMenu = require('electron-context-menu');
+const util = require('util');
 
 // Report crashes to our server.
 // crashReporter.start();
@@ -12,10 +14,11 @@ var tray = null;
 // Quit when all windows are closed.
 app.on('window-all-closed', function() {
   // if (process.platform != 'darwin')
-    app.quit();
+  app.quit();
 });
 
 function createGmailWindow(url) {
+
   // Create the browser window.
   win = new BrowserWindow({
     width: 1200,
@@ -41,6 +44,20 @@ function createGmailWindow(url) {
   win.on('minimize', function(event) {
     win.hide();
     event.preventDefault();
+  });
+
+  session.defaultSession.on('will-download', (event, item, webContents) => {
+    win.webContents.send('download-start', {text: `${item.getFilename()} (starting...)`});
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        win.webContents.send('download-interrupted');
+      } else if (state === 'progressing') {
+        win.webContents.send('download-progressing', {text: `${item.getFilename()} (${Math.round(item.getReceivedBytes()/1000)}/${Math.round(item.getTotalBytes()/1000)} KB)`});
+      }
+    });
+    item.once('done', (event, state) => {
+      win.webContents.send('download-done', {path: item.getSavePath(), state: state, text: `${item.getFilename()} (${state === 'completed' ? 'complete, click to reveal' : state})`});
+    });
   });
 
 }
@@ -124,6 +141,11 @@ function setupMenu() {
           accelerator: 'Command+F',
           click: function() { BrowserWindow.getFocusedWindow().webContents.send('find'); }
         },
+        {
+          label: 'Downloads',
+          accelerator: 'Command+D',
+          click: function() { BrowserWindow.getFocusedWindow().webContents.send('download-show'); }
+        },
       ]
     },
     {
@@ -175,7 +197,7 @@ function setupMenu() {
 app.on('ready', function() {
 
   ipcMain.on('add-account', function(event, args) {
-      createGmailWindow(args);
+    createGmailWindow(args);
   });
 
   ipcMain.on('unread', function(event, unread) {
@@ -184,10 +206,9 @@ app.on('ready', function() {
     tray.setToolTip((unread.length === 0 ? 'No': unread ) + ' unread messages');
   });
 
-  createGmailWindow('file://'+__dirname+'/index.html');
-
   setupTray();
-
   setupMenu();
+
+  createGmailWindow('file://'+__dirname+'/index.html');
 
 });
