@@ -1,6 +1,4 @@
 const {app, BrowserWindow, Menu, Tray, crashReporter, ipcMain, session} = require('electron');  // Module to control application life.
-const spellchecker = require('electron-context-menu');
-const contextMenu = require('electron-context-menu');
 const util = require('util');
 
 // Report crashes to our server.
