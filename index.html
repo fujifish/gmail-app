@@ -112,7 +112,7 @@
       webview.addEventListener('dom-ready', function() {
 
         var windowTitle = webview.getTitle();
-        var accountMatch = windowTitle.match(/Inbox .*- (.+) - (.+)/);
+        var accountMatch = windowTitle.match(/Inbox (.+) - (.+)/);
         if (accountMatch) {
           remote.getCurrentWindow().setTitle(accountMatch[2] + ' - ' + accountMatch[1]);
         }
@@ -140,9 +140,8 @@
             var inbox = document.querySelector('a[href$="#inbox"][title^="Inbox"]');
             // console.log('inbox: ' + inbox);
             if (inbox) {
-              var title = inbox.innerText;
               // console.log('inbox title: ' + title);
-              var matched = title.match(/Inbox \((\d+)\)/);
+              var matched = document.title.match(/Inbox \((\d+)\)/) || inbox.innerText.match(/Inbox \((\d+)\)/);
               // console.log('inbox match: ' + matched);
               var unread = '';
               if (matched) {
