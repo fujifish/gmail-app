@@ -141,11 +141,11 @@
             // console.log('inbox: ' + inbox);
             if (inbox) {
               // console.log('inbox title: ' + title);
-              var matched = document.title.match(/Inbox \((\d+)\)/) || inbox.innerText.match(/Inbox \((\d+)\)/);
+              var matched = document.title.match(/Inbox \(([\d,]+)\)/) || inbox.innerText.match(/Inbox \(([\d,]+)\)/);
               // console.log('inbox match: ' + matched);
               var unread = '';
               if (matched) {
-                unread = matched[1];
+                unread = matched[1].replace(/,/g, '');
               }
               // console.log('inbox unread: ' + unread);
               if (last != unread) {

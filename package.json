@@ -1,16 +1,16 @@
 {
-  "name": "Gmail",
-  "version": "1.2.0",
+  "name": "gmail",
+  "version": "2.0.1",
   "main": "main.js",
   "dependencies": {
     "electron-context-menu": "0.9.1",
-    "spellchecker": "3.3.1"
+    "spellchecker": "3.4.4"
   },
   "devDependencies": {
     "electron-rebuild": "1.5.7",
-    "electron-packager": "8.6.0"
+    "electron-packager": "12.0.2"
   },
   "scripts": {
-    "build": "electron-packager . --icon=gmail.icns --platform=darwin --arch=x64 --electron-version=1.6.2  --overwrite"
+    "build": "electron-packager . --icon=gmail.icns --platform=darwin --arch=x64 --electron-version=2.0.0  --overwrite"
   }
 }
